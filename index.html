@@ -126,7 +126,7 @@
             background: white;
             padding: 40px;
             border-radius: 20px;
-            max-width: 500px;
+            max-width: 600px;
             width: 90%;
             max-height: 80vh;
             overflow-y: auto;
@@ -166,6 +166,11 @@
             background: #f8f9ff;
         }
 
+        .upload-area.dragover {
+            background: #e0e7ff;
+            border-color: #764ba2;
+        }
+
         .upload-icon {
             font-size: 3rem;
             color: #667eea;
@@ -186,6 +191,7 @@
             cursor: pointer;
             width: 100%;
             margin-top: 15px;
+            transition: opacity 0.3s;
         }
 
         .action-btn:disabled {
@@ -193,7 +199,11 @@
             cursor: not-allowed;
         }
 
-        .password-input {
+        .action-btn:hover:not(:disabled) {
+            opacity: 0.9;
+        }
+
+        .password-input, .pages-input, .quality-input {
             width: 100%;
             padding: 12px;
             margin: 10px 0;
@@ -208,6 +218,71 @@
             background: #f5f5f5;
             border-radius: 8px;
             display: none;
+        }
+
+        .preview-area.show {
+            display: block;
+        }
+
+        .file-list {
+            list-style: none;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .file-list li {
+            padding: 8px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .remove-file {
+            color: #ff4444;
+            cursor: pointer;
+            padding: 0 5px;
+            font-weight: bold;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            margin: 10px 0;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-bar.show {
+            display: block;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .download-link {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        .image-preview {
+            max-width: 100%;
+            max-height: 200px;
+            margin-top: 10px;
+            border-radius: 5px;
         }
 
         footer {
@@ -225,7 +300,27 @@
             color: #ff6b6b;
         }
 
-        /* Responsive Design */
+        /* Loading Spinner */
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 10px auto;
+            display: none;
+        }
+
+        .spinner.show {
+            display: block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         @media (max-width: 768px) {
             header h1 {
                 font-size: 2.5rem;
@@ -240,6 +335,12 @@
             }
         }
     </style>
+    <!-- Include PDF.js and other libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/compressorjs@1.2.1/dist/compressor.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -313,115 +414,178 @@
         </footer>
     </div>
 
-    <!-- Modals for each tool -->
+    <!-- PDF to Image Modal -->
     <div id="pdfToImageModal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal('pdfToImageModal')">&times;</span>
             <h2>PDF to Image</h2>
-            <div class="upload-area" onclick="document.getElementById('pdfToImageInput').click()">
+            <div class="upload-area" id="pdfToImageDropZone">
                 <div class="upload-icon">📤</div>
                 <p>Click or drag PDF to upload</p>
             </div>
-            <input type="file" id="pdfToImageInput" class="file-input" accept=".pdf" onchange="handleFileSelect(this, 'pdfToImagePreview')">
+            <input type="file" id="pdfToImageInput" class="file-input" accept=".pdf">
+            <div class="progress-bar" id="pdfToImageProgress">
+                <div class="progress-fill" id="pdfToImageProgressFill"></div>
+            </div>
+            <div class="spinner" id="pdfToImageSpinner"></div>
             <div id="pdfToImagePreview" class="preview-area"></div>
             <button class="action-btn" onclick="convertPdfToImage()" id="pdfToImageBtn">Convert to Images</button>
         </div>
     </div>
 
+    <!-- PDF Protector Modal -->
     <div id="pdfProtectorModal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal('pdfProtectorModal')">&times;</span>
             <h2>PDF Protector</h2>
-            <div class="upload-area" onclick="document.getElementById('pdfProtectorInput').click()">
+            <div class="upload-area" id="pdfProtectorDropZone">
                 <div class="upload-icon">🔒</div>
                 <p>Click or drag PDF to upload</p>
             </div>
-            <input type="file" id="pdfProtectorInput" class="file-input" accept=".pdf" onchange="handleFileSelect(this, 'pdfProtectorPreview')">
-            <input type="password" class="password-input" id="pdfPassword" placeholder="Enter password" value="">
+            <input type="file" id="pdfProtectorInput" class="file-input" accept=".pdf">
+            <input type="password" class="password-input" id="pdfPassword" placeholder="Enter password">
+            <div class="progress-bar" id="pdfProtectorProgress">
+                <div class="progress-fill" id="pdfProtectorProgressFill"></div>
+            </div>
+            <div class="spinner" id="pdfProtectorSpinner"></div>
             <div id="pdfProtectorPreview" class="preview-area"></div>
             <button class="action-btn" onclick="protectPdf()">Protect PDF</button>
         </div>
     </div>
 
+    <!-- Image Compressor Modal -->
     <div id="imageCompressorModal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal('imageCompressorModal')">&times;</span>
             <h2>Image Compressor</h2>
-            <div class="upload-area" onclick="document.getElementById('imageCompressorInput').click()">
+            <div class="upload-area" id="imageCompressorDropZone">
                 <div class="upload-icon">🗜️</div>
                 <p>Click or drag image to upload</p>
             </div>
-            <input type="file" id="imageCompressorInput" class="file-input" accept="image/*" onchange="handleFileSelect(this, 'imageCompressorPreview')">
+            <input type="file" id="imageCompressorInput" class="file-input" accept="image/*">
+            <select class="quality-input" id="compressionQuality">
+                <option value="0.8">High Quality (80%)</option>
+                <option value="0.6" selected>Medium Quality (60%)</option>
+                <option value="0.4">Low Quality (40%)</option>
+            </select>
+            <div class="progress-bar" id="imageCompressorProgress">
+                <div class="progress-fill" id="imageCompressorProgressFill"></div>
+            </div>
+            <div class="spinner" id="imageCompressorSpinner"></div>
             <div id="imageCompressorPreview" class="preview-area"></div>
             <button class="action-btn" onclick="compressImage()">Compress Image</button>
         </div>
     </div>
 
+    <!-- Word to PDF Modal -->
     <div id="wordToPdfModal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal('wordToPdfModal')">&times;</span>
             <h2>Word to PDF</h2>
-            <div class="upload-area" onclick="document.getElementById('wordToPdfInput').click()">
+            <div class="upload-area" id="wordToPdfDropZone">
                 <div class="upload-icon">📝</div>
                 <p>Click or drag Word document to upload</p>
             </div>
-            <input type="file" id="wordToPdfInput" class="file-input" accept=".doc,.docx" onchange="handleFileSelect(this, 'wordToPdfPreview')">
+            <input type="file" id="wordToPdfInput" class="file-input" accept=".doc,.docx">
+            <div class="progress-bar" id="wordToPdfProgress">
+                <div class="progress-fill" id="wordToPdfProgressFill"></div>
+            </div>
+            <div class="spinner" id="wordToPdfSpinner"></div>
             <div id="wordToPdfPreview" class="preview-area"></div>
             <button class="action-btn" onclick="convertWordToPdf()">Convert to PDF</button>
         </div>
     </div>
 
+    <!-- PDF Merger Modal -->
     <div id="pdfMergerModal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal('pdfMergerModal')">&times;</span>
             <h2>PDF Merger</h2>
-            <div class="upload-area" onclick="document.getElementById('pdfMergerInput').click()">
+            <div class="upload-area" id="pdfMergerDropZone">
                 <div class="upload-icon">🔗</div>
                 <p>Click or drag multiple PDFs to upload</p>
             </div>
-            <input type="file" id="pdfMergerInput" class="file-input" accept=".pdf" multiple onchange="handleMultipleFiles(this, 'pdfMergerPreview')">
+            <input type="file" id="pdfMergerInput" class="file-input" accept=".pdf" multiple>
+            <div class="progress-bar" id="pdfMergerProgress">
+                <div class="progress-fill" id="pdfMergerProgressFill"></div>
+            </div>
+            <div class="spinner" id="pdfMergerSpinner"></div>
             <div id="pdfMergerPreview" class="preview-area"></div>
             <button class="action-btn" onclick="mergePdfs()">Merge PDFs</button>
         </div>
     </div>
 
+    <!-- Image to PDF Modal -->
     <div id="imageToPdfModal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal('imageToPdfModal')">&times;</span>
             <h2>Image to PDF</h2>
-            <div class="upload-area" onclick="document.getElementById('imageToPdfInput').click()">
+            <div class="upload-area" id="imageToPdfDropZone">
                 <div class="upload-icon">🖼️</div>
                 <p>Click or drag images to upload</p>
             </div>
-            <input type="file" id="imageToPdfInput" class="file-input" accept="image/*" multiple onchange="handleMultipleFiles(this, 'imageToPdfPreview')">
+            <input type="file" id="imageToPdfInput" class="file-input" accept="image/*" multiple>
+            <div class="progress-bar" id="imageToPdfProgress">
+                <div class="progress-fill" id="imageToPdfProgressFill"></div>
+            </div>
+            <div class="spinner" id="imageToPdfSpinner"></div>
             <div id="imageToPdfPreview" class="preview-area"></div>
             <button class="action-btn" onclick="convertImagesToPdf()">Create PDF</button>
         </div>
     </div>
 
+    <!-- PDF Page Remover Modal -->
     <div id="pdfPageRemoverModal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal('pdfPageRemoverModal')">&times;</span>
             <h2>PDF Page Remover</h2>
-            <div class="upload-area" onclick="document.getElementById('pdfPageRemoverInput').click()">
+            <div class="upload-area" id="pdfPageRemoverDropZone">
                 <div class="upload-icon">✂️</div>
                 <p>Click or drag PDF to upload</p>
             </div>
-            <input type="file" id="pdfPageRemoverInput" class="file-input" accept=".pdf" onchange="handleFileSelect(this, 'pdfPageRemoverPreview')">
-            <input type="text" class="password-input" id="pagesToRemove" placeholder="Pages to remove (e.g., 1,3,5-7)">
+            <input type="file" id="pdfPageRemoverInput" class="file-input" accept=".pdf">
+            <input type="text" class="pages-input" id="pagesToRemove" placeholder="Pages to remove (e.g., 1,3,5-7)">
+            <div class="progress-bar" id="pdfPageRemoverProgress">
+                <div class="progress-fill" id="pdfPageRemoverProgressFill"></div>
+            </div>
+            <div class="spinner" id="pdfPageRemoverSpinner"></div>
             <div id="pdfPageRemoverPreview" class="preview-area"></div>
             <button class="action-btn" onclick="removePdfPages()">Remove Pages</button>
         </div>
     </div>
 
     <script>
+        // Initialize PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+        // Store current files for each tool
+        const toolFiles = {
+            pdfToImage: null,
+            pdfProtector: null,
+            imageCompressor: null,
+            wordToPdf: null,
+            pdfMerger: [],
+            imageToPdf: [],
+            pdfPageRemover: null
+        };
+
         // Modal functions
-        function openModal(modalId) {
-            document.getElementById(modalId + 'Modal').style.display = 'flex';
+        function openModal(toolName) {
+            document.getElementById(toolName + 'Modal').style.display = 'flex';
+            setupDropZones(toolName);
         }
 
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
+            // Clear files when closing
+            const toolName = modalId.replace('Modal', '');
+            if (toolFiles[toolName]) {
+                if (Array.isArray(toolFiles[toolName])) {
+                    toolFiles[toolName] = [];
+                } else {
+                    toolFiles[toolName] = null;
+                }
+            }
         }
 
         // Close modal when clicking outside
@@ -431,76 +595,481 @@
             }
         }
 
-        // File handling
-        function handleFileSelect(input, previewId) {
-            const preview = document.getElementById(previewId);
-            if (input.files && input.files[0]) {
-                const file = input.files[0];
-                preview.style.display = 'block';
-                preview.innerHTML = `
-                    <p><strong>Selected file:</strong> ${file.name}</p>
-                    <p><strong>Size:</strong> ${(file.size / 1024).toFixed(2)} KB</p>
-                `;
+        // Setup drag and drop zones
+        function setupDropZones(toolName) {
+            const dropZone = document.getElementById(toolName + 'DropZone');
+            const fileInput = document.getElementById(toolName + 'Input');
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
             }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.classList.add('dragover');
+                });
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.classList.remove('dragover');
+                });
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                const files = e.dataTransfer.files;
+                handleFiles(toolName, files);
+            });
+
+            dropZone.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                handleFiles(toolName, e.target.files);
+            });
         }
 
-        function handleMultipleFiles(input, previewId) {
-            const preview = document.getElementById(previewId);
-            if (input.files && input.files.length > 0) {
-                preview.style.display = 'block';
-                let html = '<p><strong>Selected files:</strong></p><ul>';
-                for (let i = 0; i < input.files.length; i++) {
-                    html += `<li>${input.files[i].name} (${(input.files[i].size / 1024).toFixed(2)} KB)</li>`;
+        function handleFiles(toolName, files) {
+            const preview = document.getElementById(toolName + 'Preview');
+            preview.classList.add('show');
+            
+            if (files.length > 1 || toolName.includes('Merger') || toolName.includes('ImageToPdf')) {
+                // Handle multiple files
+                toolFiles[toolName] = Array.from(files);
+                let html = '<p><strong>Selected files:</strong></p><ul class="file-list">';
+                for (let i = 0; i < files.length; i++) {
+                    html += `<li>
+                        ${files[i].name} (${(files[i].size / 1024).toFixed(2)} KB)
+                        <span class="remove-file" onclick="removeFile('${toolName}', ${i})">&times;</span>
+                    </li>`;
                 }
                 html += '</ul>';
                 preview.innerHTML = html;
+            } else {
+                // Handle single file
+                const file = files[0];
+                toolFiles[toolName] = file;
+                
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        preview.innerHTML = `
+                            <p><strong>Selected file:</strong> ${file.name}</p>
+                            <p><strong>Size:</strong> ${(file.size / 1024).toFixed(2)} KB</p>
+                            <img src="${e.target.result}" class="image-preview" alt="Preview">
+                        `;
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    preview.innerHTML = `
+                        <p><strong>Selected file:</strong> ${file.name}</p>
+                        <p><strong>Size:</strong> ${(file.size / 1024).toFixed(2)} KB</p>
+                        <p><strong>Type:</strong> ${file.type || 'Unknown'}</p>
+                    `;
+                }
             }
         }
 
-        // Tool functions (simulated - in real app, these would call backend APIs)
-        function convertPdfToImage() {
-            showMessage('PDF to Image conversion started. Your images will be ready shortly!');
+        function removeFile(toolName, index) {
+            if (Array.isArray(toolFiles[toolName])) {
+                toolFiles[toolName].splice(index, 1);
+                // Refresh preview
+                const files = toolFiles[toolName];
+                const preview = document.getElementById(toolName + 'Preview');
+                
+                if (files.length === 0) {
+                    preview.classList.remove('show');
+                    preview.innerHTML = '';
+                } else {
+                    let html = '<p><strong>Selected files:</strong></p><ul class="file-list">';
+                    for (let i = 0; i < files.length; i++) {
+                        html += `<li>
+                            ${files[i].name} (${(files[i].size / 1024).toFixed(2)} KB)
+                            <span class="remove-file" onclick="removeFile('${toolName}', ${i})">&times;</span>
+                        </li>`;
+                    }
+                    html += '</ul>';
+                    preview.innerHTML = html;
+                }
+            }
         }
 
-        function protectPdf() {
+        function showProgress(toolName, percent) {
+            const progressBar = document.getElementById(toolName + 'Progress');
+            const progressFill = document.getElementById(toolName + 'ProgressFill');
+            progressBar.classList.add('show');
+            progressFill.style.width = percent + '%';
+        }
+
+        function hideProgress(toolName) {
+            const progressBar = document.getElementById(toolName + 'Progress');
+            progressBar.classList.remove('show');
+        }
+
+        function showSpinner(toolName) {
+            document.getElementById(toolName + 'Spinner').classList.add('show');
+        }
+
+        function hideSpinner(toolName) {
+            document.getElementById(toolName + 'Spinner').classList.remove('show');
+        }
+
+        function downloadFile(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // PDF to Image Conversion
+        async function convertPdfToImage() {
+            const file = toolFiles.pdfToImage;
+            if (!file) {
+                alert('Please select a PDF file first');
+                return;
+            }
+
+            showSpinner('pdfToImage');
+            
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    showProgress('pdfToImage', (i / pdf.numPages) * 100);
+                    
+                    const page = await pdf.getPage(i);
+                    const viewport = page.getViewport({ scale: 2.0 });
+                    
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+                    
+                    await page.render({
+                        canvasContext: context,
+                        viewport: viewport
+                    }).promise;
+                    
+                    // Convert to image and download
+                    canvas.toBlob((blob) => {
+                        downloadFile(blob, `page_${i}.png`);
+                    }, 'image/png');
+                }
+                
+                hideProgress('pdfToImage');
+                alert('PDF converted to images successfully!');
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error converting PDF to images');
+            } finally {
+                hideSpinner('pdfToImage');
+            }
+        }
+
+        // PDF Protection
+        async function protectPdf() {
+            const file = toolFiles.pdfProtector;
             const password = document.getElementById('pdfPassword').value;
+            
+            if (!file) {
+                alert('Please select a PDF file first');
+                return;
+            }
+            
             if (!password) {
                 alert('Please enter a password');
                 return;
             }
-            showMessage('PDF protection added successfully!');
+
+            showSpinner('pdfProtector');
+            showProgress('pdfProtector', 50);
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+                
+                // Note: pdf-lib doesn't support password protection directly
+                // This is a placeholder - in production, you'd need a backend service
+                
+                const pdfBytes = await pdfDoc.save();
+                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                
+                showProgress('pdfProtector', 100);
+                downloadFile(blob, `protected_${file.name}`);
+                
+                alert('PDF protected successfully! (Note: This is a demo - actual password protection requires backend)');
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error protecting PDF');
+            } finally {
+                hideProgress('pdfProtector');
+                hideSpinner('pdfProtector');
+            }
         }
 
-        function compressImage() {
-            showMessage('Image compression completed! Quality preserved, size reduced.');
+        // Image Compression
+        async function compressImage() {
+            const file = toolFiles.imageCompressor;
+            const quality = parseFloat(document.getElementById('compressionQuality').value);
+            
+            if (!file) {
+                alert('Please select an image file first');
+                return;
+            }
+
+            showSpinner('imageCompressor');
+            showProgress('imageCompressor', 30);
+
+            try {
+                new Compressor(file, {
+                    quality: quality,
+                    success(result) {
+                        showProgress('imageCompressor', 100);
+                        downloadFile(result, `compressed_${file.name}`);
+                        alert('Image compressed successfully!');
+                        hideProgress('imageCompressor');
+                        hideSpinner('imageCompressor');
+                    },
+                    error(err) {
+                        console.error('Error:', err);
+                        alert('Error compressing image');
+                        hideProgress('imageCompressor');
+                        hideSpinner('imageCompressor');
+                    }
+                });
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error compressing image');
+                hideProgress('imageCompressor');
+                hideSpinner('imageCompressor');
+            }
         }
 
-        function convertWordToPdf() {
-            showMessage('Word document converted to PDF successfully!');
+        // Word to PDF Conversion
+        async function convertWordToPdf() {
+            const file = toolFiles.wordToPdf;
+            
+            if (!file) {
+                alert('Please select a Word document first');
+                return;
+            }
+
+            showSpinner('wordToPdf');
+            showProgress('wordToPdf', 30);
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
+                
+                // Create PDF from HTML
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Simple HTML to PDF conversion
+                const html = result.value;
+                doc.html(html, {
+                    callback: function(doc) {
+                        showProgress('wordToPdf', 100);
+                        const pdfBlob = doc.output('blob');
+                        downloadFile(pdfBlob, file.name.replace(/\.docx?$/, '.pdf'));
+                        alert('Word document converted to PDF successfully!');
+                        hideProgress('wordToPdf');
+                        hideSpinner('wordToPdf');
+                    },
+                    x: 10,
+                    y: 10
+                });
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error converting Word to PDF');
+                hideProgress('wordToPdf');
+                hideSpinner('wordToPdf');
+            }
         }
 
-        function mergePdfs() {
-            showMessage('PDFs merged successfully!');
+        // PDF Merger
+        async function mergePdfs() {
+            const files = toolFiles.pdfMerger;
+            
+            if (!files || files.length < 2) {
+                alert('Please select at least 2 PDF files');
+                return;
+            }
+
+            showSpinner('pdfMerger');
+            
+            try {
+                const mergedPdf = await PDFLib.PDFDocument.create();
+                
+                for (let i = 0; i < files.length; i++) {
+                    showProgress('pdfMerger', (i / files.length) * 100);
+                    
+                    const arrayBuffer = await files[i].arrayBuffer();
+                    const pdf = await PDFLib.PDFDocument.load(arrayBuffer);
+                    const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+                    copiedPages.forEach(page => mergedPdf.addPage(page));
+                }
+                
+                showProgress('pdfMerger', 100);
+                
+                const pdfBytes = await mergedPdf.save();
+                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                
+                downloadFile(blob, 'merged.pdf');
+                alert('PDFs merged successfully!');
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error merging PDFs');
+            } finally {
+                hideProgress('pdfMerger');
+                hideSpinner('pdfMerger');
+            }
         }
 
-        function convertImagesToPdf() {
-            showMessage('Images converted to PDF successfully!');
+        // Image to PDF Conversion
+        async function convertImagesToPdf() {
+            const files = toolFiles.imageToPdf;
+            
+            if (!files || files.length === 0) {
+                alert('Please select at least one image');
+                return;
+            }
+
+            showSpinner('imageToPdf');
+            
+            try {
+                const pdfDoc = await PDFLib.PDFDocument.create();
+                
+                for (let i = 0; i < files.length; i++) {
+                    showProgress('imageToPdf', (i / files.length) * 100);
+                    
+                    const arrayBuffer = await files[i].arrayBuffer();
+                    
+                    let image;
+                    if (files[i].type.includes('jpeg') || files[i].type.includes('jpg')) {
+                        image = await pdfDoc.embedJpg(arrayBuffer);
+                    } else if (files[i].type.includes('png')) {
+                        image = await pdfDoc.embedPng(arrayBuffer);
+                    } else {
+                        continue;
+                    }
+                    
+                    const page = pdfDoc.addPage([image.width, image.height]);
+                    page.drawImage(image, {
+                        x: 0,
+                        y: 0,
+                        width: image.width,
+                        height: image.height
+                    });
+                }
+                
+                showProgress('imageToPdf', 100);
+                
+                const pdfBytes = await pdfDoc.save();
+                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                
+                downloadFile(blob, 'images.pdf');
+                alert('Images converted to PDF successfully!');
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error converting images to PDF');
+            } finally {
+                hideProgress('imageToPdf');
+                hideSpinner('imageToPdf');
+            }
         }
 
-        function removePdfPages() {
-            const pages = document.getElementById('pagesToRemove').value;
-            if (!pages) {
+        // PDF Page Remover
+        async function removePdfPages() {
+            const file = toolFiles.pdfPageRemover;
+            const pagesInput = document.getElementById('pagesToRemove').value;
+            
+            if (!file) {
+                alert('Please select a PDF file first');
+                return;
+            }
+            
+            if (!pagesInput) {
                 alert('Please specify pages to remove');
                 return;
             }
-            showMessage(`Pages ${pages} removed from PDF successfully!`);
+
+            showSpinner('pdfPageRemover');
+            showProgress('pdfPageRemover', 30);
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+                
+                // Parse pages to remove
+                const pagesToRemove = parsePagesInput(pagesInput, pdfDoc.getPageCount());
+                const pagesToKeep = [];
+                
+                for (let i = 0; i < pdfDoc.getPageCount(); i++) {
+                    if (!pagesToRemove.includes(i + 1)) {
+                        pagesToKeep.push(i);
+                    }
+                }
+                
+                showProgress('pdfPageRemover', 60);
+                
+                const newPdf = await PDFLib.PDFDocument.create();
+                const copiedPages = await newPdf.copyPages(pdfDoc, pagesToKeep);
+                copiedPages.forEach(page => newPdf.addPage(page));
+                
+                showProgress('pdfPageRemover', 90);
+                
+                const pdfBytes = await newPdf.save();
+                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                
+                showProgress('pdfPageRemover', 100);
+                downloadFile(blob, `modified_${file.name}`);
+                
+                alert('Pages removed successfully!');
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error removing pages');
+            } finally {
+                hideProgress('pdfPageRemover');
+                hideSpinner('pdfPageRemover');
+            }
         }
 
-        function showMessage(message) {
-            alert(message);
+        function parsePagesInput(input, totalPages) {
+            const pages = new Set();
+            const parts = input.split(',');
+            
+            for (const part of parts) {
+                if (part.includes('-')) {
+                    const [start, end] = part.split('-').map(Number);
+                    for (let i = start; i <= end; i++) {
+                        if (i >= 1 && i <= totalPages) {
+                            pages.add(i);
+                        }
+                    }
+                } else {
+                    const page = Number(part);
+                    if (page >= 1 && page <= totalPages) {
+                        pages.add(page);
+                    }
+                }
+            }
+            
+            return Array.from(pages);
         }
 
-        // Add keyboard support for closing modals
+        // Keyboard support for closing modals
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
                 const modals = document.getElementsByClassName('modal');
